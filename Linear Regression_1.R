@@ -135,6 +135,3 @@ resid_test <- predicted_values - test$price
 price.stdres_test <- scale(resid_test)
 qq.plt_residual<- qqnorm(price.stdres_test,xlab = 'Normal Scores',ylab = 'Residuals',main = 'Residual Plot')
 qqline(price.stdres_test)
-
-
-#Lasso Regression
