@@ -1,0 +1,303 @@
+# Systematic Repository Analysis Framework
+
+A structured approach to understand any project by analyzing its Git repository structure.
+
+---
+
+## Phase 1: Discover the Main Problem
+
+### Step 1.1: Start with Documentation
+- **README.md**: Look for problem statement, motivation, and "Why this exists"
+- **docs/**: Check for architecture docs, design decisions, or ADRs (Architecture Decision Records)
+- **CONTRIBUTING.md**: Often explains the project's goals and scope
+- **GitHub Issues/Discussions**: Browse "enhancement" and "question" labels for context
+
+### Step 1.2: Analyze High-Level Structure
+```
+Key indicators of the problem domain:
+- Project name and description
+- Top-level directory names (e.g., "ml/", "api/", "parser/")
+- Dependencies in package files (requirements.txt, package.json, go.mod)
+- Test file names reveal what problems are being solved
+```
+
+### Step 1.3: Read Entry Points
+- `main.py`, `index.js`, `main.go`, `app.py`
+- CLI definitions (`cli.py`, `cmd/`)
+- API route definitions (`routes/`, `controllers/`)
+- Configuration files show what the system needs to work
+
+### Step 1.4: Examine Examples and Tests
+- `examples/` directory shows typical use cases
+- Integration tests demonstrate end-to-end workflows
+- Test fixtures reveal the problem scenarios being addressed
+
+---
+
+## Phase 2: Identify the Components
+
+### Step 2.1: Map Directory Structure
+Create a mental model by categorizing directories:
+
+#### Common Patterns:
+```
+Core Logic:
+- src/, lib/, pkg/, core/
+- Domain-specific folders (models/, services/, handlers/)
+
+Infrastructure:
+- config/, settings/
+- database/, migrations/, schema/
+- utils/, helpers/, common/
+
+Interfaces:
+- api/, routes/, controllers/
+- cli/, commands/
+- ui/, frontend/, templates/
+
+External Integration:
+- integrations/, connectors/, adapters/
+- clients/, providers/
+
+Quality & Operations:
+- tests/, test/, __tests__/
+- scripts/, tools/
+- docs/, documentation/
+```
+
+### Step 2.2: Identify Component Boundaries
+Look for clear separation indicators:
+- **Separate packages/modules**: Each subdirectory with its own `__init__.py`, `mod.rs`, etc.
+- **Interface files**: `interface.ts`, `protocol.py`, abstract base classes
+- **Dependency injection**: Shows components are designed to be swappable
+- **Internal vs external**: `internal/` vs `pkg/` (Go), `private/` vs `public/`
+
+### Step 2.3: Map Components by Responsibility
+For each major directory, identify:
+- **Purpose**: What problem does this solve?
+- **Inputs**: What data does it consume?
+- **Outputs**: What does it produce?
+- **Dependencies**: What does it import/require?
+
+### Step 2.4: Create a Component Inventory
+```markdown
+## Component List
+
+### 1. [Component Name]
+- **Location**: `path/to/component/`
+- **Purpose**: Brief description
+- **Key Files**: Main classes/functions
+- **Dependencies**: What it uses
+- **Used By**: What depends on it
+
+[Repeat for each component]
+```
+
+---
+
+## Phase 3: Understand Component Interactions
+
+### Step 3.1: Trace Data Flow
+Follow a typical user request through the codebase:
+1. **Entry point**: Where does data enter? (API endpoint, CLI command, event)
+2. **Validation layer**: Where is input validated/sanitized?
+3. **Business logic**: Which components process the data?
+4. **Data persistence**: Where is state stored/retrieved?
+5. **Response/Output**: How does data exit the system?
+
+### Step 3.2: Analyze Import Graphs
+Use tools or manual analysis:
+```bash
+# Python example
+grep -r "^from" . --include="*.py" | sort | uniq
+
+# JavaScript example
+grep -r "import.*from" . --include="*.js" | sort | uniq
+```
+
+Identify:
+- **Hub components**: Imported by many files (central utilities, models)
+- **Leaf components**: Import many, imported by few (high-level orchestrators)
+- **Cyclic dependencies**: Warning sign of tight coupling
+
+### Step 3.3: Map Communication Patterns
+
+#### Direct Calls (Synchronous)
+- Function/method invocations
+- Look at class instantiation and method calls
+- Check dependency injection configuration
+
+#### Indirect Communication (Asynchronous)
+- Message queues (RabbitMQ, Kafka config)
+- Event emitters/listeners (`on()`, `emit()`, `@event_handler`)
+- Webhooks and callbacks
+- Background job queues (Celery, Sidekiq)
+
+#### Data-Mediated Interaction
+- Shared databases/tables
+- Cache layers (Redis, Memcached)
+- File system artifacts
+- API contracts (OpenAPI/Swagger definitions)
+
+### Step 3.4: Identify Integration Points
+Look for:
+- **Configuration files**: Show external services (database URLs, API keys)
+- **Client libraries**: boto3 (AWS), requests (HTTP), psycopg2 (PostgreSQL)
+- **Protocol implementations**: gRPC, GraphQL, REST, WebSocket
+- **Middleware/Interceptors**: Cross-cutting concerns (auth, logging, metrics)
+
+### Step 3.5: Create Interaction Diagrams
+
+#### Dependency Graph
+```
+API Layer
+  ↓
+Service Layer ←→ Cache
+  ↓              ↓
+Data Layer   ← Models
+  ↓
+Database
+```
+
+#### Sequence Diagram (for critical flows)
+```
+User → API → AuthService → BusinessLogic → Database
+                ↓                ↓
+            TokenCache    → EventPublisher → NotificationService
+```
+
+---
+
+## Practical Workflow Example
+
+### Analyzing a Web Application Repository
+
+**Step 1: Problem Discovery**
+```bash
+# Read the README
+cat README.md
+
+# Check package dependencies
+cat requirements.txt  # or package.json, Gemfile, etc.
+
+# Browse the main entry point
+cat src/app.py
+```
+
+**Step 2: Component Identification**
+```bash
+# Map the structure
+tree -L 2 -d src/
+
+# Results might show:
+# src/
+# ├── api/          → HTTP interface component
+# ├── models/       → Data models component
+# ├── services/     → Business logic component
+# ├── repositories/ → Data access component
+# └── utils/        → Shared utilities component
+```
+
+**Step 3: Interaction Analysis**
+```bash
+# Trace a typical request
+# 1. Find route definition
+grep -r "@app.route" src/api/
+
+# 2. Check what the route handler calls
+cat src/api/user_controller.py
+
+# 3. Follow service calls
+cat src/services/user_service.py
+
+# 4. Check data access
+cat src/repositories/user_repository.py
+```
+
+---
+
+## Tools to Accelerate Analysis
+
+### Static Analysis
+- **Python**: `pydeps`, `modulegraph`, `import-linter`
+- **JavaScript**: `madge`, `dependency-cruiser`
+- **General**: `cloc` (count lines of code by type)
+
+### Visualization
+- **GitHub**: Insights → Network graph, Contributors, Code frequency
+- **IDE Tools**: Call hierarchy, type hierarchy, find usages
+- **Documentation Generators**: `sphinx`, `jsdoc`, `godoc`
+
+### Repository Exploration
+```bash
+# Find largest files (likely core components)
+find . -type f -exec wc -l {} + | sort -rn | head -20
+
+# Most changed files (hotspots)
+git log --format=format: --name-only | grep -v '^$' | sort | uniq -c | sort -rn | head -20
+
+# Most recent work (active areas)
+git log --pretty=format: --name-only --since="3 months ago" | sort | uniq -c | sort -rn | head -20
+```
+
+---
+
+## Checklist Summary
+
+### Main Problem ✓
+- [ ] Read README and documentation
+- [ ] Identify domain from dependencies
+- [ ] Understand use cases from examples/tests
+- [ ] Know the problem the project solves
+
+### Components ✓
+- [ ] Map directory structure
+- [ ] Identify component boundaries
+- [ ] List each component's responsibility
+- [ ] Note key files in each component
+
+### Interactions ✓
+- [ ] Trace typical data flows
+- [ ] Analyze import/dependency graphs
+- [ ] Identify communication patterns
+- [ ] Map integration points
+- [ ] Document critical workflows
+
+---
+
+## Common Repository Patterns
+
+### Monorepo
+```
+/packages
+  /component-a
+  /component-b
+  /shared-utils
+```
+→ Multiple related components in one repo
+
+### Layered Architecture
+```
+/presentation  (UI/API)
+/application   (Use cases)
+/domain        (Business logic)
+/infrastructure (External concerns)
+```
+→ Clear separation of concerns by layer
+
+### Feature-Based
+```
+/features
+  /authentication
+  /user-management
+  /billing
+```
+→ Organized by business feature
+
+### Microservices (Polyrepo)
+```
+repo-1: user-service
+repo-2: order-service
+repo-3: notification-service
+```
+→ Each service in its own repository
